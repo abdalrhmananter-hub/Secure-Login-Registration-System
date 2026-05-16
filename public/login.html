@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login – AuthApp</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════
+       NAVIGATION BAR
+  ══════════════════════════════════════════════════════ -->
+  <nav class="navbar">
+    <a class="navbar__brand" href="/"><span>Auth</span>App</a>
+
+    <ul class="navbar__links">
+      <li><a href="/home">Home</a></li>
+      <li data-auth="guest"><a href="/login" class="active">Login</a></li>
+      <li data-auth="guest"><a href="/register">Register</a></li>
+      <li data-auth="user" class="nav-hidden"><a href="/logout" class="logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════
+       LOGIN FORM
+  ══════════════════════════════════════════════════════ -->
+  <div class="auth-wrapper">
+    <div class="auth-card">
+
+      <h1 class="auth-card__title">Welcome back</h1>
+      <p class="auth-card__subtitle">
+        Don't have an account? <a href="/register">Sign up</a>
+      </p>
+
+      <div class="alert" id="alert" role="alert"></div>
+
+      <form id="login-form" novalidate>
+
+        <div class="form-group">
+          <label for="identifier">Username or Email</label>
+          <input
+            type="text"
+            id="identifier"
+            name="identifier"
+            placeholder="johndoe or you@example.com"
+            autocomplete="username"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Your password"
+            autocomplete="current-password"
+            required
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          Sign in
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <script src="/js/navbar.js"></script>
+
+  <script>
+    // ─────────────────────────────────────────────────────
+    //  Login form handler
+    //  Same pattern as register.html: intercept submit,
+    //  validate on the client, POST JSON, handle response.
+    // ─────────────────────────────────────────────────────
+
+    const form      = document.getElementById('login-form');
+    const alertBox  = document.getElementById('alert');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function showAlert(message, type = 'error') {
+      alertBox.textContent = message;
+      alertBox.className   = `alert alert-${type} show`;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const identifier = document.getElementById('identifier').value.trim();
+      const password   = document.getElementById('password').value;
+
+      // Basic client-side checks
+      if (!identifier || !password) {
+        return showAlert('Please enter your username/email and password.');
+      }
+
+      submitBtn.classList.add('loading');
+      submitBtn.textContent = 'Signing in';
+
+      try {
+        const response = await fetch('/login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ identifier, password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showAlert('Login successful! Redirecting…', 'success');
+          // Redirect to home page after a brief pause
+          setTimeout(() => window.location.href = '/home', 1000);
+        } else {
+          // Show the server's error message (e.g. "Invalid credentials")
+          showAlert(data.message || 'Login failed.');
+        }
+
+      } catch (err) {
+        showAlert('Network error. Please try again.');
+      } finally {
+        submitBtn.classList.remove('loading');
+        submitBtn.textContent = 'Sign in';
+      }
+    });
+  </script>
+
+</body>
+</html>

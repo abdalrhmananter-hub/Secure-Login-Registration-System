@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home – AuthApp</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════
+       NAVIGATION BAR
+  ══════════════════════════════════════════════════════ -->
+  <nav class="navbar">
+    <a class="navbar__brand" href="/"><span>Auth</span>App</a>
+
+    <ul class="navbar__links">
+      <li><a href="/home" class="active">Home</a></li>
+      <li data-auth="guest"><a href="/login">Login</a></li>
+      <li data-auth="guest"><a href="/register">Register</a></li>
+      <li data-auth="user" class="nav-hidden"><a href="/logout" class="logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════
+       DASHBOARD CONTENT
+       This page is ONLY reachable when logged in.
+       The Express route /home has requireLogin middleware.
+       As a second check we also verify in JS below.
+  ══════════════════════════════════════════════════════ -->
+  <main class="dashboard" id="dashboard">
+
+    <!-- Greeting: the username is injected by JS below -->
+    <h1 class="dashboard__greeting">
+      Welcome back, <span class="accent" id="display-username">…</span> 👋
+    </h1>
+    <p class="dashboard__sub">Here's your personal dashboard. You're logged in securely.</p>
+
+    <!-- Quick-stat cards (decorative, showing what a real dashboard might include) -->
+    <div class="dashboard__stats">
+
+      <div class="stat-card">
+        <div class="stat-card__icon">🔐</div>
+        <div class="stat-card__label">Session</div>
+        <div class="stat-card__value">Active</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card__icon">🛡️</div>
+        <div class="stat-card__label">Password</div>
+        <div class="stat-card__value">Hashed</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card__icon">🔒</div>
+        <div class="stat-card__label">Connection</div>
+        <div class="stat-card__value">Secure</div>
+      </div>
+
+    </div>
+
+    <!-- Security features summary box -->
+    <div class="info-box">
+      <h3>🛡️ Security features active on this page</h3>
+      <ul>
+        <li>Passwords hashed with bcrypt (cost factor 12) – never stored in plain text</li>
+        <li>Parameterised SQL queries – immune to SQL injection attacks</li>
+        <li>HTTP-only session cookie – JavaScript cannot steal it (XSS protection)</li>
+        <li>Helmet.js security headers – Content-Security-Policy, X-Frame-Options, etc.</li>
+        <li>Server-side session validation on every protected route</li>
+        <li>Input sanitised and validated with express-validator before touching the DB</li>
+      </ul>
+    </div>
+
+  </main>
+
+  <script src="/js/navbar.js"></script>
+
+  <script>
+    // ─────────────────────────────────────────────────────
+    //  Dashboard auth check + personalisation
+    //
+    //  Even though the Express route already checks the session
+    //  server-side, we do a second check here in JS to:
+    //    1. Personalise the greeting with the username.
+    //    2. Guard against any edge-case where the HTML is
+    //       somehow served without the middleware (belt-and-braces).
+    // ─────────────────────────────────────────────────────
+
+    async function initDashboard() {
+      try {
+        // Ask our own server: is there a valid session?
+        const res  = await fetch('/api/session');
+        const data = await res.json();
+
+        if (!data.loggedIn) {
+          // No valid session – redirect to login immediately
+          // (The server should have already done this, but just in case)
+          window.location.href = '/login';
+          return;
+        }
+
+        // Inject the username into the greeting
+        const usernameSpan = document.getElementById('display-username');
+        if (usernameSpan) {
+          // textContent (not innerHTML) prevents XSS:
+          // if the username somehow contained <script> it won't execute
+          usernameSpan.textContent = data.username;
+        }
+
+      } catch (err) {
+        // Fetch failed – network issue; redirect to be safe
+        console.error('Session check failed:', err);
+        window.location.href = '/login';
+      }
+    }
+
+    // Run immediately when the DOM is ready
+    document.addEventListener('DOMContentLoaded', initDashboard);
+  </script>
+
+</body>
+</html>

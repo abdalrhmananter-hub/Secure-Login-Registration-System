@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register – AuthApp</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════
+       NAVIGATION BAR
+       data-auth attributes are used by navbar.js to show/hide
+       links based on whether the user is logged in.
+  ══════════════════════════════════════════════════════ -->
+  <nav class="navbar">
+    <a class="navbar__brand" href="/"><span>Auth</span>App</a>
+
+    <ul class="navbar__links">
+      <!-- Visible to everyone -->
+      <li><a href="/home">Home</a></li>
+
+      <!-- data-auth="guest" → shown only when NOT logged in -->
+      <li data-auth="guest"><a href="/login">Login</a></li>
+      <li data-auth="guest"><a href="/register" class="active">Register</a></li>
+
+      <!-- data-auth="user" → shown only when logged in -->
+      <li data-auth="user" class="nav-hidden"><a href="/logout" class="logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════
+       REGISTRATION FORM
+  ══════════════════════════════════════════════════════ -->
+  <div class="auth-wrapper">
+    <div class="auth-card">
+
+      <h1 class="auth-card__title">Create account</h1>
+      <p class="auth-card__subtitle">
+        Already have one? <a href="/login">Sign in</a>
+      </p>
+
+      <!-- Alert box: hidden by default, shown by JS on error/success -->
+      <div class="alert" id="alert" role="alert"></div>
+
+      <!-- We use id="register-form" so our JS can target it -->
+      <form id="register-form" novalidate>
+        <!-- novalidate disables native browser validation so WE control the UX -->
+
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            placeholder="e.g. johndoe"
+            autocomplete="username"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="you@example.com"
+            autocomplete="email"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="At least 6 characters"
+            autocomplete="new-password"
+            required
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          Create account
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ── Shared navbar script ── -->
+  <script src="/js/navbar.js"></script>
+
+  <!-- ── Page-specific script ── -->
+  <script>
+    
+    const form      = document.getElementById('register-form');
+    const alertBox  = document.getElementById('alert');
+    const submitBtn = document.getElementById('submit-btn');
+
+    /**
+     * showAlert(message, type)
+     * Displays the alert box with the given message.
+     * type = 'error' | 'success'
+     */
+    function showAlert(message, type = 'error') {
+      alertBox.textContent  = message;
+      alertBox.className    = `alert alert-${type} show`;
+    }
+
+    // Listen for the form's submit event
+    form.addEventListener('submit', async (e) => {
+      // Prevent the default browser behaviour (full page reload)
+      e.preventDefault();
+
+      // ── Client-side validation ─────────────────────────
+      // This is a FIRST LINE of defence for UX; the server
+      // validates again independently (never trust only the client).
+      const username = document.getElementById('username').value.trim();
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !email || !password) {
+        return showAlert('Please fill in all fields.');
+      }
+
+      // Simple email format check using a regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return showAlert('Please enter a valid email address.');
+      }
+
+      if (password.length < 6) {
+        return showAlert('Password must be at least 6 characters.');
+      }
+
+      // ── Show loading state ─────────────────────────────
+      submitBtn.classList.add('loading');
+      submitBtn.textContent = 'Creating account';
+
+      try {
+        // ── Send data to the server via fetch (AJAX) ──────
+        // We POST JSON to our Express route /register.
+        // Using JSON (instead of FormData) makes the body easy
+        // to parse with express.json() and inspect in DevTools.
+        const response = await fetch('/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Registration worked – show success then redirect to login
+          showAlert('Account created! Redirecting to login…', 'success');
+          setTimeout(() => window.location.href = '/login', 1500);
+        } else {
+          // Server returned a validation or conflict error
+          showAlert(data.message || 'Registration failed.');
+        }
+
+      } catch (err) {
+        // Network error or server crash
+        showAlert('Network error. Please try again.');
+      } finally {
+        // Always remove the loading state whether we succeeded or failed
+        submitBtn.classList.remove('loading');
+        submitBtn.textContent = 'Create account';
+      }
+    });
+  </script>
+
+</body>
+</html>
